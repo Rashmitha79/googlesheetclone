@@ -1,162 +1,124 @@
-const spreadSheetContainer = document.querySelector("#spreadsheet-container")
-const exportBtn = document.querySelector("#export-btn")
-const ROWS = 10
-const COLS = 10
-const spreadsheet = []
-const alphabets = [
-    "A",
-    "B",
-    "C",
-    "D",
-    "E",
-    "F",
-    "G",
-    "H",
-    "I",
-    "J",
-    "K",
-    "L",
-    "M",
-    "N",
-    "O",
-    "P",
-    "Q",
-    "R",
-    "S",
-    "T",
-    "U",
-    "V",
-    "W",
-    "X",
-    "Y",
-    "Z",
-]
-class Cell {
-    constructor(isHeader, disabled, data, row, column, rowName, columnName, active = false) {
-        this.isHeader = isHeader
-        this.disabled = disabled
-        this.data = data
-        this.row = row
-        this.rowName = rowName
-        this.column = column
-        this.columnName = columnName
-        this.active = active
+const initialCellState = {
+    fontFamily_data: 'monospace',
+    fontSize_data: '14',
+    isBold: false,
+    isItalic: false,
+    textAlign: 'start',
+    isUnderlined: false,
+    color: '#000000',
+    backgroundColor: '#ffffff',
+    content: ''
+}
+
+let sheetsArray = [];
+
+let activeSheetIndex = -1;
+
+let activeSheetObject = false;
+
+let activeCell = false;
+
+
+// functionality elments
+let fontFamilyBtn = document.querySelector('.font-family');
+let fontSizeBtn = document.querySelector('.font-size');
+let boldBtn = document.querySelector('.bold');
+let italicBtn = document.querySelector('.italic');
+let underlineBtn = document.querySelector('.underline');
+let leftBtn = document.querySelector('.start');
+let centerBtn = document.querySelector('.center');
+let rightBtn = document.querySelector('.end');
+let colorBtn = document.querySelector('#color');
+let bgColorBtn = document.querySelector('#bgcolor');
+let addressBar = document.querySelector('.address-bar');
+let formula = document.querySelector('.formula-bar');
+let downloadBtn = document.querySelector(".download");
+let openBtn = document.querySelector(".open");
+
+// grid header ro element
+let gridHeader = document.querySelector('.grid-header');
+
+// add header column
+let bold = document.createElement('div');
+bold.className = 'grid-header-col';
+bold.innerText = 'SL. NO.';
+gridHeader.append(bold);
+for(let i = 65; i<=90; i++){
+    let bold = document.createElement('div');
+    bold.className = 'grid-header-col';
+    bold.innerText = String.fromCharCode(i);
+    bold.id = String.fromCharCode(i);
+    gridHeader.append(bold);
+}
+
+
+for(let i = 1; i<=100; i++){
+    let newRow = document.createElement('div')
+    newRow.className = 'row';
+    document.querySelector('.grid').append(newRow);
+
+    let bold = document.createElement('div');
+    bold.className = 'grid-cell';
+    bold.innerText = i;
+    bold.id = i;
+    newRow.append(bold);
+
+    for(let j = 65; j<=90; j++){
+        let cell = document.createElement('div');
+        cell.className = 'grid-cell cell-focus';
+        cell.id = String.fromCharCode(j) + i;
+        cell.contentEditable = true;
+
+        cell.addEventListener('click', (event) => {
+            event.stopPropagation();
+        })
+        cell.addEventListener('focus', cellFocus);
+        cell.addEventListener('focusout', cellFocusOut);
+        cell.addEventListener('input', cellInput);
+
+        newRow.append(cell);
     }
 }
 
-exportBtn.onclick = function (e) {
-    let csv = ""
-    for (let i = 0; i < spreadsheet.length; i++) {
-        csv +=
-            spreadsheet[i]
-                .filter((item) => !item.isHeader)
-                .map((item) => item.data)
-                .join(",") + "\r\n"
-    }
+function cellFocus(event){
+    let key = event.target.id;
+    addressBar.innerHTML = event.target.id;
+    activeCell = event.target;
 
-    const csvObj = new Blob([csv])
-    const csvUrl = URL.createObjectURL(csvObj)
-    console.log("csv", csvUrl)
+    let activeBg = '#c9c8c8';
+    let inactiveBg = '#ecf0f1';
 
-    const a = document.createElement("a")
-    a.href = csvUrl
-    a.download = "Exported Spreadsheet.csv"
-    a.click()
+    fontFamilyBtn.value = activeSheetObject[key].fontFamily_data;
+    fontSizeBtn.value = activeSheetObject[key].fontSize_data;
+    boldBtn.style.backgroundColor = activeSheetObject[key].isBold?activeBg:inactiveBg;
+    italicBtn.style.backgroundColor = activeSheetObject[key].isItalic?activeBg:inactiveBg;
+    underlineBtn.style.backgroundColor = activeSheetObject[key].isUnderlined?activeBg:inactiveBg;
+    setAlignmentBg(key, activeBg, inactiveBg);
+    colorBtn.value = activeSheetObject[key].color;
+    bgColorBtn.value = activeSheetObject[key].backgroundColor;
+
+    formula.value = activeCell.innerText;
+
+    document.getElementById(event.target.id.slice(0, 1)).classList.add('row-col-focus');
+    document.getElementById(event.target.id.slice(1)).classList.add('row-col-focus');
 }
-
-initSpreadsheet()
-
-function initSpreadsheet() {
-    for (let i = 0; i < COLS; i++) {
-        let spreadsheetRow = []
-        for (let j = 0; j < COLS; j++) {
-            let cellData = ""
-            let isHeader = false
-            let disabled = false
-            if (j === 0) {
-                cellData = i
-                isHeader = true
-                disabled = true
-            }
-
-            if (i === 0) {
-                isHeader = true
-                disabled = true
-                cellData = alphabets[j - 1]
-            }
-
-            if (!cellData) {
-                cellData = ""
-            }
-            const rowName = i
-            const columnName = alphabets[j - 1]
-            const cell = new Cell(isHeader, disabled, cellData, i, j, rowName, columnName, false)
-            spreadsheetRow.push(cell)
-        }
-        spreadsheet.push(spreadsheetRow)
-    }
-    console.log("spreadsheet", spreadsheet)
-    drawSheet()
+function cellInput(){
+    let key = activeCell.id;
+    formula.value = activeCell.innerText;
+    activeSheetObject[key].content = activeCell.innerText;
 }
-
-function drawSheet() {
-    spreadSheetContainer.innerHTML = ""
-    for (let i = 0; i < spreadsheet.length; i++) {
-        const rowContainerEl = document.createElement("div")
-        rowContainerEl.className = "cell-row"
-
-        for (let j = 0; j < spreadsheet[i].length; j++) {
-            const cell = spreadsheet[i][j]
-            rowContainerEl.append(createCellEl(cell))
-        }
-        spreadSheetContainer.append(rowContainerEl)
+function setAlignmentBg(key, activeBg, inactiveBg){
+    leftBtn.style.backgroundColor = inactiveBg;
+    centerBtn.style.backgroundColor = inactiveBg;
+    rightBtn.style.backgroundColor = inactiveBg;
+    if(key){
+        document.querySelector('.'+ activeSheetObject[key].textAlign).style.backgroundColor = activeBg;
+    }
+    else{
+        leftBtn.style.backgroundColor = activeBg;
     }
 }
-
-function createCellEl(cell) {
-    const cellEl = document.createElement("input")
-    cellEl.className = "cell"
-    cellEl.id = "cell_" + cell.row + cell.column
-    cellEl.value = cell.data
-    cellEl.disabled = cell.disabled
-
-    if (cell.isHeader) {
-        cellEl.classList.add("header")
-    }
-
-    cellEl.onclick = () => handleCellClick(cell)
-    cellEl.onchange = (e) => handleOnChange(e.target.value, cell)
-    return cellEl
-}
-
-function handleCellClick(cell) {
-    clearHeaderActiveStates()
-    const columnHeader = spreadsheet[0][cell.column]
-    const rowHeader = spreadsheet[cell.row][0]
-    const columnHeaderEl = getElFromRowCol(columnHeader.row, columnHeader.column)
-    const rowHeaderEl = getElFromRowCol(rowHeader.row, rowHeader.column)
-    columnHeaderEl.classList.add("active")
-    rowHeaderEl.classList.add("active")
-    document.querySelector("#cell-status").innerHTML = cell.columnName + "" + cell.rowName
-    // console.log("clicked cell", cell, "columnHeaderEl", columnHeaderEl, "rowHeaderEl", rowHeaderEl)
-}
-
-function handleOnChange(data, cell) {
-    cell.data = data
-}
-
-function clearHeaderActiveStates() {
-    for (let i = 0; i < spreadsheet.length; i++) {
-        for (let j = 0; j < spreadsheet[i].length; j++) {
-            const cell = spreadsheet[i][j]
-            if (cell.isHeader) {
-                let cellEl = getElFromRowCol(cell.row, cell.column)
-                cellEl.classList.remove("active")
-            }
-        }
-    }
-}
-
-function getElFromRowCol(row, col) {
-    return document.querySelector("#cell_" + row + col)
+function cellFocusOut(event){
+    document.getElementById(event.target.id.slice(0, 1)).classList.remove('row-col-focus');
+    document.getElementById(event.target.id.slice(1)).classList.remove('row-col-focus');
 }
